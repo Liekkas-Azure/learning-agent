@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceType {
+  RSS
+  SEED_URL
+  SEARCH_QUERY
+}
+
+enum SourcePolicy {
+  strict
+  expanded
+}
+
+enum JobType {
+  CRAWL_URL
+  FETCH_RSS
+  EMBED_DOCUMENT
+  REFRESH_SOURCE
+}
+
+enum JobStatus {
+  pending
+  active
+  completed
+  failed
+}
+
+enum StorageTier {
+  summary
+  full
+}
+
+model Organization {
+  id           String         @id @default(cuid())
+  name         String
+  slug         String         @unique
+  clerkOrgId   String?        @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  memberships  Membership[]
+  topics       Topic[]
+  quotas       OrgQuota?
+  subscription Subscription?
+  auditLogs    AuditLog[]
+  jobs         Job[]
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  clerkUserId String?      @unique
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  progress    UserProgress[]
+}
+
+model Membership {
+  id     String   @id @default(cuid())
+  role   String   @default("member")
+  userId String
+  orgId  String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  orgId            String   @unique
+  plan             String   @default("free")
+  status           String   @default("active")
+  stripeCustomerId String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  org              Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model OrgQuota {
+  id              String    @id @default(cuid())
+  orgId           String    @unique
+  dailyCrawlLimit Int       @default(100)
+  dailyEmbedLimit Int       @default(500)
+  crawlsUsedToday Int       @default(0)
+  embedsUsedToday Int       @default(0)
+  quotaResetAt    DateTime?
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  orgId     String
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, createdAt])
+}
+
+model Topic {
+  id          String             @id @default(cuid())
+  orgId       String
+  title       String
+  description String?
+  goals       Json?
+  language    String             @default("zh")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  org         Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sources     Source[]
+  documents   Document[]
+  artifacts   LearningArtifact[]
+  progress    UserProgress[]
+
+  @@index([orgId])
+}
+
+model Source {
+  id                 String       @id @default(cuid())
+  topicId            String
+  type               SourceType
+  policy             SourcePolicy @default(strict)
+  config             Json
+  crawlDepth         Int          @default(1)
+  refreshCron        String?
+  lastFetchedAt      DateTime?
+  etag               String?
+  lastModifiedHeader String?
+  contentHash        String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  topic              Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  documents          Document[]
+  jobs               Job[]
+
+  @@index([topicId])
+}
+
+model Document {
+  id                 String      @id @default(cuid())
+  topicId            String
+  sourceId           String?
+  url                String
+  canonicalUrl       String
+  title              String?
+  excerpt            String?
+  bodyText           String?
+  contentHash        String?
+  storageTier        StorageTier @default(summary)
+  fetchedAt          DateTime    @default(now())
+  httpStatus         Int?
+  robotsAllowed      Boolean?
+  domain             String?
+  etag               String?
+  lastModifiedHeader String?
+  embeddingModel     String?
+  embedding          Json?
+  topic              Topic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  source             Source?     @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  chunks             Chunk[]
+
+  @@unique([topicId, canonicalUrl])
+  @@index([topicId])
+  @@index([domain])
+}
+
+model Chunk {
+  id         String   @id @default(cuid())
+  documentId String
+  content    String
+  position   Int      @default(0)
+  embedding  Json?
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model LearningArtifact {
+  id         String   @id @default(cuid())
+  topicId    String
+  documentId String?
+  kind       String
+  payload    Json
+  createdAt  DateTime @default(now())
+  topic      Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, kind])
+  @@index([documentId])
+}
+
+model Job {
+  id        String    @id @default(cuid())
+  orgId     String
+  sourceId  String?
+  type      JobType
+  status    JobStatus @default(pending)
+  payload   Json?
+  error     String?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  source    Source?   @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([orgId])
+}
+
+model UserProgress {
+  id            String    @id @default(cuid())
+  userId        String
+  topicId       String
+  cardIdsSeen   Json?
+  lastSessionAt DateTime?
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic         Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+}

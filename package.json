@@ -1,0 +1,21 @@
+{
+  "name": "learning-saas",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "db:generate": "npm run generate --workspace=@learning-saas/db",
+    "db:migrate": "npm run migrate:dev --workspace=@learning-saas/db",
+    "db:push": "npm run db:push --workspace=@learning-saas/db",
+    "db:seed": "npm run seed --workspace=@learning-saas/db",
+    "dev": "npm run dev --workspace=web",
+    "worker": "npm run dev --workspace=@learning-saas/worker",
+    "build": "npm run build --workspace=@learning-saas/db && npm run build --workspace=web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
