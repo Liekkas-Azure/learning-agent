@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@learning-saas/db";
-import { assertTopicInOrg, getOrgContext } from "@/lib/org-context";
+import { assertTopicInOrg, getOrgContext, prisma } from "@learning-saas/db";
 import { getIngestionQueue } from "@/lib/queue";
 import { canEnqueueCrawl } from "@/lib/quota";
 

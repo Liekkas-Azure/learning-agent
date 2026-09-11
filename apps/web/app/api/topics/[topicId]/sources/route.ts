@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma, SourcePolicy, SourceType } from "@learning-saas/db";
-import { assertTopicInOrg, getOrgContext } from "@/lib/org-context";
+import {
+  assertTopicInOrg,
+  getOrgContext,
+  prisma,
+  SourcePolicy,
+  SourceType,
+} from "@learning-saas/db";
 
 type Params = { params: Promise<{ topicId: string }> };
 

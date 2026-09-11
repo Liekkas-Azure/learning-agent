@@ -1,0 +1,19 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+fastapi==0.115.0
+uvicorn==0.30.6
+python-multipart==0.0.9
+sqlmodel==0.0.22
+pydantic==2.9.2
+pydantic-settings==2.5.2
+openai==1.51.2
+APScheduler==3.10.4
+# openai<1.56 与 httpx>=0.28 不兼容（Client 不再接受 proxies=）
+httpx>=0.25.0,<0.28
+python-dotenv==1.0.1
+pymupdf==1.24.14
+neo4j==5.25.0
+boto3>=1.35.0,<2
+langgraph>=0.2.0,<0.4
+pymilvus>=2.4.0,<3
+torch>=2.2.0,<3

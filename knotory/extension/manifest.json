@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Knotory 摘录",
+  "version": "0.1.0",
+  "description": "将网页选段摘录到本地 Knotory 文库",
+  "permissions": ["activeTab", "contextMenus", "storage"],
+  "host_permissions": ["http://127.0.0.1:8000/*", "http://localhost:8000/*"],
+  "action": {
+    "default_title": "Knotory 摘录",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

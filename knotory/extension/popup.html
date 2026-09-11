@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Knotory 摘录</title>
+    <style>
+      body { font: 13px/1.4 system-ui, sans-serif; margin: 0; padding: 12px; width: 320px; }
+      textarea { width: 100%; box-sizing: border-box; margin: 8px 0; }
+      input { width: 100%; box-sizing: border-box; margin: 4px 0 8px; }
+      button { padding: 6px 12px; cursor: pointer; }
+      .msg { font-size: 12px; color: #525252; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <label>API 地址<input id="api" value="http://127.0.0.1:8000" /></label>
+    <label>API Key（可选）<input id="key" type="password" placeholder="与 KNOTORY_API_KEY 一致" /></label>
+    <label>摘录<textarea id="text" rows="6"></textarea></label>
+    <label>标题<input id="title" /></label>
+    <button id="send">保存到文库</button>
+    <p class="msg" id="msg"></p>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -37,19 +37,27 @@ enum StorageTier {
   full
 }
 
+enum KnowledgeEntryKind {
+  link
+  note
+  clip
+}
+
 model Organization {
-  id           String         @id @default(cuid())
-  name         String
-  slug         String         @unique
-  clerkOrgId   String?        @unique
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  memberships  Membership[]
-  topics       Topic[]
-  quotas       OrgQuota?
-  subscription Subscription?
-  auditLogs    AuditLog[]
-  jobs         Job[]
+  id               String           @id @default(cuid())
+  name             String
+  slug             String           @unique
+  clerkOrgId       String?          @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  memberships      Membership[]
+  topics             Topic[]
+  quotas             OrgQuota?
+  subscription     Subscription?
+  auditLogs        AuditLog[]
+  jobs               Job[]
+  knowledgeTags    KnowledgeTag[]
+  knowledgeEntries KnowledgeEntry[]
 }
 
 model User {
@@ -227,4 +235,32 @@ model UserProgress {
   topic         Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@unique([userId, topicId])
+}
+
+model KnowledgeTag {
+  id        String           @id @default(cuid())
+  orgId     String
+  name      String
+  createdAt DateTime         @default(now())
+  org       Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  entries   KnowledgeEntry[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
+model KnowledgeEntry {
+  id        String             @id @default(cuid())
+  orgId     String
+  kind      KnowledgeEntryKind
+  title     String
+  url       String?
+  body      String?
+  origin    String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime         @updatedAt
+  org       Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  tags      KnowledgeTag[]
+
+  @@index([orgId, updatedAt])
 }

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@learning-saas/db";
-import { getOrgContext } from "@/lib/org-context";
+import { getOrgContext, prisma } from "@learning-saas/db";
 import { logEvent } from "@/lib/telemetry";
 
 export async function GET() {

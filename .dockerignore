@@ -1,0 +1,15 @@
+.git
+.gitignore
+**/.next
+**/node_modules
+**/.env
+**/.env.local
+**/*.md
+knotory
+.cursor
+.vscode
+**/*.db
+**/*.db-journal
+apps/web/.next
+apps/hk/.next
+apps/vault/.next

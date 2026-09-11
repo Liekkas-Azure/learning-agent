@@ -1,0 +1,45 @@
+# 生产/自托管一键启动：后端 + 前端 + 持久化数据卷（Neo4j 可选，见 docker-compose.yml）
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      KNOTORY_DATA_DIR: /data
+      KNOTORY_DB_PATH: /data/knotory.db
+    volumes:
+      - knotory-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # 浏览器访问的后端地址；同机部署可保持默认；公网请改为 https://你的 API 域名
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://127.0.0.1:8000}
+        NEXT_PUBLIC_KNOTORY_API_KEY: ${NEXT_PUBLIC_KNOTORY_API_KEY:-}
+    ports:
+      - "3010:3010"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3010').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  knotory-data:

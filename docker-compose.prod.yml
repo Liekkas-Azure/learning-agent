@@ -1,0 +1,123 @@
+# Learning SaaS 生产 Compose（参考 knotory/docker-compose.prod.yml）
+# 默认端口：主站 3040（避开常见 3000 / Knotory 3010）、港股 3030、知识库 3020
+# 用法见 DEPLOY.md
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  db-init:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: db-init
+    environment:
+      DATABASE_URL: file:/data/learning.db
+      DEMO_ORG_SLUG: ${DEMO_ORG_SLUG:-demo-org}
+    volumes:
+      - learning-data:/data
+    restart: "no"
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: app-runner
+      args:
+        APP_DIR: apps/web
+        APP_PORT: 3040
+    ports:
+      - "${LEARNING_WEB_PORT:-3040}:3040"
+    env_file:
+      - .env
+    environment:
+      PORT: "3040"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: file:/data/learning.db
+      REDIS_URL: redis://redis:6379
+      DEMO_AUTO_BOOTSTRAP: "1"
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://127.0.0.1:3040}
+      NEXT_PUBLIC_LEARNING_APP_URL: ${NEXT_PUBLIC_LEARNING_APP_URL:-http://127.0.0.1:3040}
+      NEXT_PUBLIC_VAULT_APP_URL: ${NEXT_PUBLIC_VAULT_APP_URL:-http://127.0.0.1:3020}
+      NEXT_PUBLIC_HK_APP_URL: ${NEXT_PUBLIC_HK_APP_URL:-http://127.0.0.1:3030}
+    volumes:
+      - learning-data:/data
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  hk:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: app-runner
+      args:
+        APP_DIR: apps/hk
+        APP_PORT: 3030
+    ports:
+      - "${LEARNING_HK_PORT:-3030}:3030"
+    env_file:
+      - .env
+    environment:
+      PORT: "3030"
+      HOSTNAME: "0.0.0.0"
+    restart: unless-stopped
+
+  vault:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: app-runner
+      args:
+        APP_DIR: apps/vault
+        APP_PORT: 3020
+    ports:
+      - "${LEARNING_VAULT_PORT:-3020}:3020"
+    env_file:
+      - .env
+    environment:
+      PORT: "3020"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: file:/data/learning.db
+      REDIS_URL: redis://redis:6379
+      DEMO_AUTO_BOOTSTRAP: "1"
+      NEXT_PUBLIC_LEARNING_APP_URL: ${NEXT_PUBLIC_LEARNING_APP_URL:-http://127.0.0.1:3040}
+    volumes:
+      - learning-data:/data
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: worker-runner
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: file:/data/learning.db
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - learning-data:/data
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  learning-data:

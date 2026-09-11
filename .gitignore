@@ -1,8 +1,15 @@
 node_modules
 .next
 dist
+coverage
+.venv
 .env
-.env.local
+.env.*
+!.env.example
+!.env*.example
+packages/db/prisma/dev.db
+packages/db/prisma/dev.db-journal
+services/worker/.env
 *.log
 .DS_Store
 public/sw.js
@@ -10,3 +17,12 @@ public/sw.js.map
 public/workbox-*.js
 public/workbox-*.js.map
 public/fallback-*.js
+**/__pycache__/
+**/.pytest_cache/
+**/*.pt
+**/*.pth
+.cursor/
+.git/cursor/
+
+# Needs token with workflow scope to push
+.github/workflows/

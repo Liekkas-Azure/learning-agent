@@ -5,6 +5,7 @@ import * as cheerio from "cheerio";
 import { MAX_RESPONSE_BYTES, USER_AGENT } from "../config";
 import { extractArticle } from "../lib/extract";
 import { chunkText } from "../lib/chunk";
+import { doubaoStructured } from "../lib/doubao";
 import { sha256 } from "../lib/hash";
 import { isAllowedByRobots } from "../lib/robots";
 import { assertFetchableUrl, canonicalizeUrl } from "../lib/url";
@@ -19,6 +20,15 @@ export type CrawlPayload = {
   depthLeft?: number;
   policy: SourcePolicy;
 };
+
+function splitTagTokens(input: string) {
+  return input
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .map((v) => v.trim())
+    .filter((v) => v.length >= 2)
+    .slice(0, 8);
+}
 
 async function fetchBody(url: string): Promise<{
   body: string;
@@ -76,6 +86,12 @@ export async function processCrawl(
   job: Job<CrawlPayload>,
 ): Promise<void> {
   const { orgId, topicId, sourceId, url, depthLeft = 0, policy } = job.data;
+  const source = sourceId
+    ? await prisma.source.findUnique({
+        where: { id: sourceId },
+        include: { topic: { select: { title: true } } },
+      })
+    : null;
   const allowedQuota = await ensureQuotaForCrawl(prisma, orgId);
   if (!allowedQuota) {
     throw new Error("Daily crawl quota exceeded");
@@ -167,6 +183,61 @@ export async function processCrawl(
       lastModifiedHeader: lastModified,
     },
   });
+
+  // 将抓取结果同步到个人知识库条目，便于在 vault 应用中直接检索与浏览。
+  const existingEntry = await prisma.knowledgeEntry.findFirst({
+    where: { orgId, url: canonical },
+    select: { id: true },
+  });
+  const sourceCfg = (source?.config ?? {}) as { label?: string; topic?: string };
+  const topicTokens = splitTagTokens(source?.topic?.title ?? "");
+  const sourceTokens = splitTagTokens(sourceCfg.label ?? "");
+  const domainTag = domain?.replace(/^www\./, "") ?? "";
+  const aiTags = await doubaoStructured<{ tags: string[] }>({
+    prisma,
+    orgId,
+    module: "worker_crawl_tagging",
+    prompt: `请基于以下网页信息给出 3-8 个中文标签，输出 JSON：{"tags":[]}\n标题:${extracted.title ?? ""}\n摘要:${excerpt ?? ""}\n正文:${(extracted.textContent ?? "").slice(0, 2000)}`,
+    fallback: { tags: [] },
+  });
+  const tagNames = [...new Set([...(aiTags.tags ?? []), ...topicTokens, ...sourceTokens, domainTag].filter(Boolean))].slice(
+    0,
+    8,
+  );
+  const tagConnect = await Promise.all(
+    tagNames.map(async (name) => {
+      const tag = await prisma.knowledgeTag.upsert({
+        where: { orgId_name: { orgId, name } },
+        create: { orgId, name },
+        update: {},
+      });
+      return { id: tag.id };
+    }),
+  );
+  if (existingEntry) {
+    await prisma.knowledgeEntry.update({
+      where: { id: existingEntry.id },
+      data: {
+        kind: "link",
+        title: extracted.title ?? canonical,
+        body: excerpt,
+        origin: domain,
+        tags: { connect: tagConnect },
+      },
+    });
+  } else {
+    await prisma.knowledgeEntry.create({
+      data: {
+        orgId,
+        kind: "link",
+        title: extracted.title ?? canonical,
+        url: canonical,
+        body: excerpt,
+        origin: domain,
+        tags: { connect: tagConnect },
+      },
+    });
+  }
 
   await prisma.chunk.deleteMany({ where: { documentId: doc.id } });
   const parts = chunkText(extracted.textContent || excerpt || "");

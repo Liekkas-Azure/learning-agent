@@ -1,3 +1,4 @@
+import "./env";
 import { Worker } from "bullmq";
 import { prisma } from "@learning-saas/db";
 import { QUEUE_NAME, redisConnection } from "./config";

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@learning-saas/db";
-import { getOrgContext } from "@/lib/org-context";
+import { getOrgContext, prisma } from "@learning-saas/db";
 
 export async function GET() {
   const { orgId } = await getOrgContext();

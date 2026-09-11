@@ -4,8 +4,8 @@
   "description": "多学科碎片化学习与资料聚合",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0ea5e9",
+  "background_color": "#030712",
+  "theme_color": "#030712",
   "icons": [
     {
       "src": "/icons/icon-192.png",

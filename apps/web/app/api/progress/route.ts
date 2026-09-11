@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@learning-saas/db";
-import { assertTopicInOrg, getOrgContext } from "@/lib/org-context";
+import { assertTopicInOrg, getOrgContext, prisma } from "@learning-saas/db";
 
 export async function POST(req: Request) {
   const { orgId, userId } = await getOrgContext();

@@ -11,9 +11,15 @@
     "db:migrate": "npm run migrate:dev --workspace=@learning-saas/db",
     "db:push": "npm run db:push --workspace=@learning-saas/db",
     "db:seed": "npm run seed --workspace=@learning-saas/db",
+    "setup:db": "bash scripts/setup-local-db.sh",
     "dev": "npm run dev --workspace=web",
+    "dev:web": "npm run dev --workspace=web",
+    "dev:vault": "npm run dev --workspace=vault",
+    "dev:hk": "npm run dev --workspace=hk",
     "worker": "npm run dev --workspace=@learning-saas/worker",
-    "build": "npm run build --workspace=@learning-saas/db && npm run build --workspace=web"
+    "build": "npm run build --workspace=@learning-saas/db && npm run build --workspace=web && npm run build --workspace=vault && npm run build --workspace=hk",
+    "deploy:up": "docker compose -f docker-compose.prod.yml up -d --build",
+    "deploy:down": "docker compose -f docker-compose.prod.yml down"
   },
   "engines": {
     "node": ">=20"

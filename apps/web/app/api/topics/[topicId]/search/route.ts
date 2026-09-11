@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@learning-saas/db";
-import { assertTopicInOrg, getOrgContext } from "@/lib/org-context";
+import { assertTopicInOrg, getOrgContext, prisma } from "@learning-saas/db";
 
 type Params = { params: Promise<{ topicId: string }> };
 
@@ -20,9 +19,9 @@ export async function GET(req: Request, ctx: Params) {
     where: {
       topicId,
       OR: [
-        { title: { contains: q, mode: "insensitive" } },
-        { excerpt: { contains: q, mode: "insensitive" } },
-        { canonicalUrl: { contains: q, mode: "insensitive" } },
+        { title: { contains: q } },
+        { excerpt: { contains: q } },
+        { canonicalUrl: { contains: q } },
       ],
     },
     take: 20,

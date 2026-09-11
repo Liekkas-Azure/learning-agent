@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@learning-saas/db";
-import { assertTopicInOrg, getOrgContext } from "@/lib/org-context";
+import { assertTopicInOrg, getOrgContext, prisma } from "@learning-saas/db";
 
 type Params = { params: Promise<{ topicId: string }> };
 
@@ -16,6 +15,12 @@ export async function GET(_req: Request, ctx: Params) {
     take: 40,
   });
 
+  /** 与客户端 /progress 一致：优先 payload.id，否则用 artifact id（旧数据可能没有 payload.id） */
+  function progressKey(c: (typeof cards)[0]): string {
+    const p = c.payload as { id?: string };
+    return typeof p?.id === "string" && p.id.length > 0 ? p.id : c.id;
+  }
+
   const progress = await prisma.userProgress.findUnique({
     where: { userId_topicId: { userId, topicId } },
   });
@@ -23,10 +28,7 @@ export async function GET(_req: Request, ctx: Params) {
     Array.isArray(progress?.cardIdsSeen) ? (progress!.cardIdsSeen as string[]) : [],
   );
 
-  const pool = cards.filter((c) => {
-    const id = (c.payload as { id?: string })?.id;
-    return id && !seen.has(id);
-  });
+  const pool = cards.filter((c) => !seen.has(progressKey(c)));
   const pick = pool.slice(0, 7);
   if (pick.length < 5 && cards.length) {
     const fallback = cards.filter((c) => !pick.find((p) => p.id === c.id)).slice(0, 5 - pick.length);
@@ -36,6 +38,7 @@ export async function GET(_req: Request, ctx: Params) {
   return NextResponse.json({
     cards: pick.map((c) => ({
       id: c.id,
+      progressId: progressKey(c),
       payload: c.payload,
     })),
   });
